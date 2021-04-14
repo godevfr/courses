@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"gioui.org/app"
 	"github.com/godevfr/courses/internal/gui"
@@ -29,14 +28,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	var data string
+	var data []string
 	for _, alb := range album.Albums.Data {
 		for _, photo := range alb.Photos.Data {
-			data += fmt.Sprintln(photo.Images[0].Source)
+			data = append(data, photo.Images[0].Source)
 		}
 	}
 
-	go gui.StartGUI("FB pictures", "cheval")
+	go gui.StartGUI("FB pictures", data)
 	app.Main()
 
 }

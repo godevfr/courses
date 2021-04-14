@@ -1,7 +1,6 @@
 package gui
 
 import (
-	"image/color"
 	"log"
 	"os"
 
@@ -10,11 +9,11 @@ import (
 	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/text"
+	"gioui.org/unit"
 	"gioui.org/widget/material"
 )
 
-func StartGUI(title, data string) {
+func StartGUI(title string, data []string) {
 	w := app.NewWindow()
 	if err := loop(w, title, data); err != nil {
 		log.Fatal(err)
@@ -22,24 +21,41 @@ func StartGUI(title, data string) {
 	os.Exit(0)
 }
 
-func loop(w *app.Window, title, data string) error {
+type C = layout.Context
+type D = layout.Dimensions
+
+func loop(w *app.Window, title string, data []string) error {
 	th := material.NewTheme(gofont.Collection())
 	var ops op.Ops
+
+	list := &layout.List{
+		Axis: layout.Vertical,
+	}
 
 	for e := range w.Events() {
 		switch e := e.(type) {
 		case system.FrameEvent:
 			gtx := layout.NewContext(&ops, e)
 
-			t := material.H1(th, title)
-			maroon := color.NRGBA{R: 127, G: 0, B: 0, A: 255}
+			in := layout.UniformInset(unit.Dp(8))
+			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+				layout.Rigid(func(gtx C) D {
+					return in.Layout(gtx, func(gtx C) D {
+						t := material.H1(th, title)
 
-			t.Alignment = text.Middle
-			t.Color = maroon
-			t.Layout(gtx)
+						return t.Layout(gtx)
+					})
+				}),
 
-			d := material.Body1(th, data)
-			d.Layout(gtx)
+				layout.Rigid(func(gtx C) D {
+					return list.Layout(gtx, len(data), func(gtx C, i int) D {
+						return in.Layout(gtx, func(gtx C) D {
+							d := material.Body1(th, data[i])
+							return d.Layout(gtx)
+						})
+					})
+				}),
+			)
 
 			e.Frame(gtx.Ops)
 		case system.DestroyEvent:
