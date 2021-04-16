@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"image"
 	"log"
 	"os"
 
@@ -9,13 +10,16 @@ import (
 	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/op/paint"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"golang.org/x/image/draw"
 )
 
-func StartGUI(title string, data []string) {
+func StartGUI(title string, photos []image.Image) {
 	w := app.NewWindow()
-	if err := loop(w, title, data); err != nil {
+	if err := loop(w, title, photos); err != nil {
 		log.Fatal(err)
 	}
 	os.Exit(0)
@@ -24,7 +28,7 @@ func StartGUI(title string, data []string) {
 type C = layout.Context
 type D = layout.Dimensions
 
-func loop(w *app.Window, title string, data []string) error {
+func loop(w *app.Window, title string, photos []image.Image) error {
 	th := material.NewTheme(gofont.Collection())
 	var ops op.Ops
 
@@ -48,10 +52,9 @@ func loop(w *app.Window, title string, data []string) error {
 				}),
 
 				layout.Rigid(func(gtx C) D {
-					return list.Layout(gtx, len(data), func(gtx C, i int) D {
+					return list.Layout(gtx, len(photos), func(gtx C, i int) D {
 						return in.Layout(gtx, func(gtx C) D {
-							d := material.Body1(th, data[i])
-							return d.Layout(gtx)
+							return layoutPhoto(gtx, photos[i])
 						})
 					})
 				}),
@@ -64,4 +67,24 @@ func loop(w *app.Window, title string, data []string) error {
 	}
 
 	return nil
+}
+
+func layoutPhoto(gtx layout.Context, photo image.Image) layout.Dimensions {
+	sz := gtx.Constraints.Min.X
+
+	var ratio float64
+	if photo.Bounds().Size().Y != 0 {
+		ratio = float64(photo.Bounds().Size().X) / float64(photo.Bounds().Size().Y)
+	}
+	if ratio == 0.0 {
+		ratio = 1.0
+	}
+
+	img := image.NewRGBA(image.Rectangle{Max: image.Point{X: sz, Y: int(float64(sz) / ratio)}})
+	draw.ApproxBiLinear.Scale(img, img.Bounds(), photo, photo.Bounds(), draw.Src, nil)
+	photoOp := paint.NewImageOp(img)
+
+	imgWidget := widget.Image{Src: photoOp}
+	imgWidget.Scale = float32(sz) / float32(gtx.Px(unit.Dp(float32(sz))))
+	return imgWidget.Layout(gtx)
 }

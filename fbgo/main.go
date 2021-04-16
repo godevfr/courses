@@ -2,6 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"image"
+	_ "image/jpeg"
+	"net/http"
 
 	"gioui.org/app"
 	"github.com/godevfr/courses/internal/gui"
@@ -10,7 +14,7 @@ import (
 
 var fbparams = fb.Params{
 	"fields":       "first_name,albums{photos{images}}",
-	"access_token": "EAAN7ZBnr7RI8BAPkLZBdZCuClkcx1hguag9os5jOqRps9m5cIWZBshon7wsXVAALg3kEXwTv0B3ZABo6se4ZCL8iQ7iyUYCUWkyZAAKpggn1eV4VYY07tItyk7pwa0RhC6oMJ9POCVNmyFtGi1fwzT8NwQ8ZAkQ6AJyAtF0Faox39QkcybQMme25kJzbNZB8QekyQ94D3JDMuK6psVByZCKSLYz8TGMiQjrojHLg7VeubZCuwZDZD",
+	"access_token": "XXX",
 }
 
 func main() {
@@ -28,16 +32,37 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	var data []string
+	var imgURLs []string
 	for _, alb := range album.Albums.Data {
 		for _, photo := range alb.Photos.Data {
-			data = append(data, photo.Images[0].Source)
+			imgURLs = append(imgURLs, photo.Images[0].Source)
 		}
 	}
 
-	go gui.StartGUI("FB pictures", data)
-	app.Main()
+	var imgs []image.Image
+	for _, imgURL := range imgURLs {
+		img, err := fetchImage(imgURL)
+		if err != nil {
+			panic(err)
+		}
+		imgs = append(imgs, img)
+	}
 
+	go gui.StartGUI("FB pictures", imgs)
+	app.Main()
+}
+
+func fetchImage(url string) (image.Image, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("fetchImage: http.Get(%q): %v", url, err)
+	}
+	defer resp.Body.Close()
+	img, _, err := image.Decode(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("fetchImage: image decode failed: %v", err)
+	}
+	return img, nil
 }
 
 type Albums struct {
