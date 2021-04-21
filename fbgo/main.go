@@ -6,10 +6,12 @@ import (
 	"image"
 	_ "image/jpeg"
 	"net/http"
+	"sync"
 
 	"gioui.org/app"
 	"github.com/godevfr/courses/internal/gui"
 	fb "github.com/huandu/facebook/v2"
+	"golang.org/x/sync/errgroup"
 )
 
 var fbparams = fb.Params{
@@ -40,12 +42,24 @@ func main() {
 	}
 
 	var imgs []image.Image
+	var errg errgroup.Group
+	var mu sync.Mutex
 	for _, imgURL := range imgURLs {
-		img, err := fetchImage(imgURL)
-		if err != nil {
-			panic(err)
-		}
-		imgs = append(imgs, img)
+		imgURL := imgURL
+		errg.Go(func() error {
+			img, err := fetchImage(imgURL)
+			if err != nil {
+				return err
+			}
+			mu.Lock()
+			imgs = append(imgs, img)
+			mu.Unlock()
+			return nil
+		})
+	}
+
+	if err := errg.Wait(); err != nil {
+		panic(err)
 	}
 
 	go gui.StartGUI("FB pictures", imgs)
