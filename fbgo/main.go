@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"gioui.org/app"
-	"github.com/godevfr/courses/internal/gui"
+	"github.com/godevfr/courses/gui"
 	fb "github.com/huandu/facebook/v2"
 )
 
